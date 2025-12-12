@@ -60,6 +60,22 @@ class NetworkParser {
      */
     [[nodiscard]] std::vector<TopologyBuildingBlock> get_topologies_per_dim() const noexcept;
 
+    /**
+     * Get mesh width (for Mesh2D topology).
+     * Returns -1 if not specified (will use square mesh based on npus_count).
+     *
+     * @return mesh width or -1 if not specified
+     */
+    [[nodiscard]] int get_mesh_width() const noexcept;
+
+    /**
+     * Get mesh height (for Mesh2D topology).
+     * Returns -1 if not specified (will use square mesh based on npus_count).
+     *
+     * @return mesh height or -1 if not specified
+     */
+    [[nodiscard]] int get_mesh_height() const noexcept;
+
   private:
     /// number of network dimensions
     int dims_count;
@@ -75,6 +91,12 @@ class NetworkParser {
 
     /// topology building block per each dimension
     std::vector<TopologyBuildingBlock> topology_per_dim;
+
+    /// mesh width for Mesh2D topology (-1 if not specified)
+    int mesh_width;
+
+    /// mesh height for Mesh2D topology (-1 if not specified)
+    int mesh_height;
 
     /**
      * Parse topology name (in string) into TopologyBuildingBlock enum

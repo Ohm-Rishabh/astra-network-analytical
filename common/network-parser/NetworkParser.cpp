@@ -9,7 +9,7 @@ LICENSE file in the root directory of this source tree.
 
 using namespace NetworkAnalytical;
 
-NetworkParser::NetworkParser(const std::string& path) noexcept : dims_count(-1) {
+NetworkParser::NetworkParser(const std::string& path) noexcept : dims_count(-1), mesh_width(-1), mesh_height(-1) {
     // initialize values
     npus_count_per_dim = {};
     bandwidth_per_dim = {};
@@ -63,6 +63,14 @@ std::vector<TopologyBuildingBlock> NetworkParser::get_topologies_per_dim() const
     return topology_per_dim;
 }
 
+int NetworkParser::get_mesh_width() const noexcept {
+    return mesh_width;
+}
+
+int NetworkParser::get_mesh_height() const noexcept {
+    return mesh_height;
+}
+
 void NetworkParser::parse_network_config_yml(const YAML::Node& network_config) noexcept {
     // parse topology_per_dim
     const auto topology_names = parse_vector<std::string>(network_config["topology"]);
@@ -78,6 +86,14 @@ void NetworkParser::parse_network_config_yml(const YAML::Node& network_config) n
     npus_count_per_dim = parse_vector<int>(network_config["npus_count"]);
     bandwidth_per_dim = parse_vector<Bandwidth>(network_config["bandwidth"]);
     latency_per_dim = parse_vector<Latency>(network_config["latency"]);
+
+    // parse optional mesh dimensions (for Mesh2D topology)
+    if (network_config["width"]) {
+        mesh_width = network_config["width"].as<int>();
+    }
+    if (network_config["height"]) {
+        mesh_height = network_config["height"].as<int>();
+    }
 
     // check the validity of the parsed network config
     check_validity();
@@ -96,6 +112,10 @@ TopologyBuildingBlock NetworkParser::parse_topology_name(const std::string& topo
 
     if (topology_name == "Switch") {
         return TopologyBuildingBlock::Switch;
+    }
+
+    if (topology_name == "Mesh2D") {
+        return TopologyBuildingBlock::Mesh2D;
     }
 
     // shouldn't reach here

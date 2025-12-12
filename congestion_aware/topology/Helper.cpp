@@ -7,6 +7,7 @@ LICENSE file in the root directory of this source tree.
 #include "congestion_aware/FullyConnected.h"
 #include "congestion_aware/Ring.h"
 #include "congestion_aware/Switch.h"
+#include "congestion_aware/Mesh2D.h"
 #include <cstdlib>
 #include <iostream>
 
@@ -34,6 +35,10 @@ std::shared_ptr<Topology> NetworkAnalyticalCongestionAware::construct_topology(
     const auto bandwidth = bandwidths_per_dim[0];
     const auto latency = latencies_per_dim[0];
 
+    // get mesh dimensions (for Mesh2D topology)
+    const auto mesh_width = network_parser.get_mesh_width();
+    const auto mesh_height = network_parser.get_mesh_height();
+
     switch (topology_type) {
     case TopologyBuildingBlock::Ring:
         return std::make_shared<Ring>(npus_count, bandwidth, latency);
@@ -41,6 +46,13 @@ std::shared_ptr<Topology> NetworkAnalyticalCongestionAware::construct_topology(
         return std::make_shared<Switch>(npus_count, bandwidth, latency);
     case TopologyBuildingBlock::FullyConnected:
         return std::make_shared<FullyConnected>(npus_count, bandwidth, latency);
+    case TopologyBuildingBlock::Mesh2D:
+        // Use explicit width/height if provided, otherwise fall back to square mesh
+        if (mesh_width > 0 && mesh_height > 0) {
+            return std::make_shared<Mesh2D>(mesh_width, mesh_height, bandwidth, latency);
+        } else {
+            return std::make_shared<Mesh2D>(npus_count, bandwidth, latency);
+        }
     default:
         // shouldn't reaach here
         std::cerr << "[Error] (network/analytical/congestion_aware) " << "not supported basic-topology" << std::endl;
