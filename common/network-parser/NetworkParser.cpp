@@ -6,6 +6,8 @@ LICENSE file in the root directory of this source tree.
 #include "common/NetworkParser.h"
 #include <cassert>
 #include <iostream>
+#include <map>
+#include <set>
 
 using namespace NetworkAnalytical;
 
@@ -71,6 +73,14 @@ int NetworkParser::get_mesh_height() const noexcept {
     return mesh_height;
 }
 
+std::set<std::pair<int, int>> NetworkParser::get_excluded_coords() const noexcept {
+    return excluded_coords;
+}
+
+std::map<std::pair<int, int>, int> NetworkParser::get_npu_placement() const noexcept {
+    return npu_placement;
+}
+
 void NetworkParser::parse_network_config_yml(const YAML::Node& network_config) noexcept {
     // parse topology_per_dim
     const auto topology_names = parse_vector<std::string>(network_config["topology"]);
@@ -95,6 +105,39 @@ void NetworkParser::parse_network_config_yml(const YAML::Node& network_config) n
         mesh_height = network_config["height"].as<int>();
     }
 
+    // parse optional excluded coordinates (for SparseMesh2D topology)
+    // Format: excluded: [ [x1, y1], [x2, y2], ... ]
+    if (network_config["excluded"]) {
+        for (const auto& coord : network_config["excluded"]) {
+            if (coord.size() >= 2) {
+                int x = coord[0].as<int>();
+                int y = coord[1].as<int>();
+                excluded_coords.insert({x, y});
+            }
+        }
+        
+        // If excluded coords are present, switch topology type to SparseMesh2D
+        if (!excluded_coords.empty() && !topology_per_dim.empty()) {
+            if (topology_per_dim[0] == TopologyBuildingBlock::Mesh2D) {
+                topology_per_dim[0] = TopologyBuildingBlock::SparseMesh2D;
+            }
+        }
+    }
+
+    // parse optional custom NPU placement (for SparseMesh2D topology)
+    // Format: npu_placement: [ [x1, y1, npu_id1], [x2, y2, npu_id2], ... ]
+    // This allows custom NPU ID assignment for optimized ring routing (e.g., snake patterns)
+    if (network_config["npu_placement"]) {
+        for (const auto& entry : network_config["npu_placement"]) {
+            if (entry.size() >= 3) {
+                int x = entry[0].as<int>();
+                int y = entry[1].as<int>();
+                int npu_id = entry[2].as<int>();
+                npu_placement[{x, y}] = npu_id;
+            }
+        }
+    }
+
     // check the validity of the parsed network config
     check_validity();
 }
@@ -116,6 +159,10 @@ TopologyBuildingBlock NetworkParser::parse_topology_name(const std::string& topo
 
     if (topology_name == "Mesh2D") {
         return TopologyBuildingBlock::Mesh2D;
+    }
+
+    if (topology_name == "SparseMesh2D") {
+        return TopologyBuildingBlock::SparseMesh2D;
     }
 
     // shouldn't reach here

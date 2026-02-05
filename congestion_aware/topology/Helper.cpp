@@ -8,6 +8,7 @@ LICENSE file in the root directory of this source tree.
 #include "congestion_aware/Ring.h"
 #include "congestion_aware/Switch.h"
 #include "congestion_aware/Mesh2D.h"
+#include "congestion_aware/SparseMesh2D.h"
 #include <cstdlib>
 #include <iostream>
 
@@ -38,6 +39,12 @@ std::shared_ptr<Topology> NetworkAnalyticalCongestionAware::construct_topology(
     // get mesh dimensions (for Mesh2D topology)
     const auto mesh_width = network_parser.get_mesh_width();
     const auto mesh_height = network_parser.get_mesh_height();
+    
+    // get excluded coordinates (for SparseMesh2D topology)
+    const auto excluded_coords = network_parser.get_excluded_coords();
+    
+    // get custom NPU placement (for SparseMesh2D topology with custom layout)
+    const auto npu_placement = network_parser.get_npu_placement();
 
     switch (topology_type) {
     case TopologyBuildingBlock::Ring:
@@ -52,6 +59,21 @@ std::shared_ptr<Topology> NetworkAnalyticalCongestionAware::construct_topology(
             return std::make_shared<Mesh2D>(mesh_width, mesh_height, bandwidth, latency);
         } else {
             return std::make_shared<Mesh2D>(npus_count, bandwidth, latency);
+        }
+    case TopologyBuildingBlock::SparseMesh2D:
+        // SparseMesh2D requires width, height, and excluded coordinates
+        if (mesh_width > 0 && mesh_height > 0) {
+            // Use custom placement constructor if npu_placement is provided
+            if (!npu_placement.empty()) {
+                return std::make_shared<SparseMesh2D>(mesh_width, mesh_height, excluded_coords, 
+                                                      npu_placement, bandwidth, latency);
+            } else {
+                return std::make_shared<SparseMesh2D>(mesh_width, mesh_height, excluded_coords, 
+                                                      bandwidth, latency);
+            }
+        } else {
+            std::cerr << "[Error] (network/analytical/congestion_aware) SparseMesh2D requires width and height" << std::endl;
+            std::exit(-1);
         }
     default:
         // shouldn't reaach here

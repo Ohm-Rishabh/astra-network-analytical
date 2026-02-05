@@ -7,6 +7,9 @@ LICENSE file in the root directory of this source tree.
 
 #include "common/Type.h"
 #include <iostream>
+#include <map>
+#include <set>
+#include <utility>
 #include <yaml-cpp/yaml.h>
 
 namespace NetworkAnalytical {
@@ -76,6 +79,25 @@ class NetworkParser {
      */
     [[nodiscard]] int get_mesh_height() const noexcept;
 
+    /**
+     * Get excluded coordinates for SparseMesh2D topology.
+     * Returns empty set if not specified (regular mesh).
+     *
+     * @return set of (x, y) coordinates to exclude from the mesh
+     */
+    [[nodiscard]] std::set<std::pair<int, int>> get_excluded_coords() const noexcept;
+
+    /**
+     * Get custom NPU placement for SparseMesh2D topology.
+     * Returns empty map if not specified (uses automatic row-major numbering).
+     *
+     * Format: map from (x, y) grid coordinate to NPU ID
+     * This allows custom NPU ID assignment like snake patterns for optimized routing.
+     *
+     * @return map of (x, y) -> npu_id for custom placement
+     */
+    [[nodiscard]] std::map<std::pair<int, int>, int> get_npu_placement() const noexcept;
+
   private:
     /// number of network dimensions
     int dims_count;
@@ -97,6 +119,12 @@ class NetworkParser {
 
     /// mesh height for Mesh2D topology (-1 if not specified)
     int mesh_height;
+
+    /// excluded coordinates for SparseMesh2D topology (empty for regular mesh)
+    std::set<std::pair<int, int>> excluded_coords;
+
+    /// custom NPU placement for SparseMesh2D: (x, y) -> npu_id (empty for auto row-major)
+    std::map<std::pair<int, int>, int> npu_placement;
 
     /**
      * Parse topology name (in string) into TopologyBuildingBlock enum
